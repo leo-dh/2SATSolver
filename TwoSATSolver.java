@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Stack;
+import java.util.TreeMap;
 
 public class TwoSATSolver{
 
@@ -22,22 +23,18 @@ public class TwoSATSolver{
     public static Map<Literal, Boolean> solution = new HashMap<Literal, Boolean>();
 
 
-    public static boolean solve(Formula formula) {
+    public static void solve(Formula formula) {
         solve(formula.getClauses());
-        return solvable;
-
     }
 
     private static void solve(ImList<Clause> clauses) {
-        formGraph(clauses); // O(m)
+        formGraph(clauses);
 
-        // for both dfs - O(V+E)
         for (Literal l : graph.keySet()){
 			if(!visited.get(l)){
 				dfsFirst(l);
 			}
 		}
-
 		while(!stack.isEmpty()){
 			Literal a = stack.peek();
 			stack.pop();
@@ -47,36 +44,41 @@ public class TwoSATSolver{
 			}
         }
 
-        checkSatisfiability(); // O(n)
-        getSolutions(); // O(1)
-
-
+        checkSatisfiability();
+        if (solvable){getSolutions();}
     }
+
     private static void getSolutions(){
-        System.out.println(solution);
+        Map<String, Boolean> sortedsolution = new TreeMap<String, Boolean>();
+        for (Literal l: solution.keySet()){
+            sortedsolution.put(l.toString(), solution.get(l));
+        }
+        for (String s: sortedsolution.keySet()){
+            if (sortedsolution.get(s)){System.out.print("1 ");}
+            else{System.out.print("0 ");}
+        }
+        System.out.println("");
     }
-    private static boolean checkSatisfiability(){
-
+    private static void checkSatisfiability(){
         Map<Literal, Integer> sccSplit = new HashMap<Literal, Integer>();
         Map<Integer, Boolean> sccTruth = new HashMap<Integer, Boolean>();
 
-        for (int num: graphScc.keySet()){  // O(n)
+        for (int num: graphScc.keySet()){
             for (Literal l: graphScc.get(num)){
                 sccSplit.put(l, num);
             }
         }
-        for (Literal variable: variableSet){ // O(n)
-            // check whether a literal and its negation are in the same scc
+        for (Literal variable: variableSet){
             if (sccSplit.get(variable).equals(sccSplit.get(variable.getNegation()))){
-                System.out.println("UNSATISFIABLE");
-                return solvable;
+                System.out.println("FORMULA UNSATISFIABLE");
+                return;
             }
         }
         solvable = true;
-        if(solvable){ // truth assignment based on the fact that scc is in topological order.
-            System.out.println("SATISFIABLE");
+        if(solvable){
+            System.out.println("FORMULA SATISFIABLE");
             int i = sccCounter - 1;
-            while (!sccTruth.containsKey(i)) { // O(n)
+            while (!sccTruth.containsKey(i)) {
                 for (Literal lit : graphScc.get(i)) {
                     if (lit instanceof PosLiteral){solution.put(lit, true);}
                     else if (lit instanceof NegLiteral){solution.put(lit.getNegation(), false);}
@@ -85,7 +87,6 @@ public class TwoSATSolver{
                 i--;
             }
         }
-        return solvable;
     }
     private static void formSccGraph(Literal l, int sccCounter){
         if (graphScc.containsKey(sccCounter)){graphScc.get(sccCounter).add(l);}
@@ -96,7 +97,7 @@ public class TwoSATSolver{
         }
     }
     private static void formGraph(ImList<Clause> clauses){
-        for (Clause clause: clauses){ // O(m)
+        for (Clause clause: clauses){
             Literal a = clause.getLiterals().first(); // First Literal of the clause
             Literal b = clause.getLiterals().rest().first(); // Second Literal of the clause
             if ((!variableSet.contains(a)) && (!variableSet.contains(a.getNegation()))){
